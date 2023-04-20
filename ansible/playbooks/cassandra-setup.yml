@@ -1,0 +1,155 @@
+---
+- hosts: cluster1
+  tasks:
+    - name: Download Cassandra 4.0.1 from source
+      get_url:
+        url: https://archive.apache.org/dist/cassandra/4.0.1/apache-cassandra-4.0.1-bin.tar.gz
+        dest: /tmp/
+        mode: '0755'
+
+    - name: Create cassandra directory in /var
+      become: true
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: 0755
+      with_items:
+        - "{{ cassandra_dir }}"
+        - "{{ cassandra_data }}"
+        - "{{ cassandra_commitlog }}"
+
+    - name: Extract Cassandra tar
+      unarchive:
+        src: /tmp/apache-cassandra-4.0.1-bin.tar.gz
+        dest: /tmp
+        remote_src: yes
+
+    - name: Copy cassandra content to /var directory
+      shell: cp -R /tmp/apache-cassandra-4.0.1/* "{{ cassandra_dir }}"
+
+    - name: Set cassandra.yaml
+      lineinfile:
+        name: "{{ cassandra_dir }}/conf/cassandra.yaml"
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      with_items:
+        - {regexp: '^cluster_name:', line: "cluster_name: '{{ cluster_name }}'"}
+        - {regexp: '^          - seeds:', line: "          - seeds: \"{{ seeds }}\""}
+        - {regexp: '^listen_address:', line: "listen_address: {{ ansible_default_ipv4.address }}"}
+        - {regexp: '^rpc_address:', line: "rpc_address: {{ ansible_default_ipv4.address }}"}
+        - {regexp: '^# data_file_directories:', line: "data_file_directories:"}
+        - {regexp: '^#     - /var/lib/cassandra/data', line: "    - {{ cassandra_data }}"}
+        - {regexp: '^# commitlog_directory:', line: "commitlog_directory: {{ cassandra_commitlog }}"}
+        - {regexp: '^authenticator:', line: "authenticator: PasswordAuthenticator"}
+        - {regexp: '^authorizer:', line: "authorizer: CassandraAuthorizer"}
+        - {regexp: '^endpoint_snitch:', line: "endpoint_snitch: GossipingPropertyFileSnitch"}
+
+    - name: Set cassandra-rackdc.properties
+      lineinfile:
+        name: "{{ cassandra_dir }}/conf/cassandra-rackdc.properties"
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      with_items:
+        - {regexp: '^dc=', line: "dc={{ dc }}"}
+        - {regexp: '^rack=', line: "rack={{ rack }}"}
+
+    - name: Set jvm11-server.options
+      lineinfile:
+        name: "{{ cassandra_dir }}/conf/jvm11-server.options"
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+      with_items:
+        - {regexp: '^-XX:[+]UseConcMarkSweepGC', line: "#-XX:+UseConcMarkSweepGC"}
+        - {regexp: '^-XX:[+]CMSParallelRemarkEnabled', line: "#-XX:+CMSParallelRemarkEnabled"}
+        - {regexp: '^-XX:SurvivorRatio=8', line: "#-XX:SurvivorRatio=8"}
+        - {regexp: '^-XX:MaxTenuringThreshold=1', line: "#-XX:MaxTenuringThreshold=1"}
+        - {regexp: '^-XX:CMSInitiatingOccupancyFraction=75', line: "#-XX:CMSInitiatingOccupancyFraction=75"}
+        - {regexp: '^-XX:[+]UseCMSInitiatingOccupancyOnly', line: "#-XX:+UseCMSInitiatingOccupancyOnly"}
+        - {regexp: '^-XX:CMSWaitDuration=10000', line: "#-XX:CMSWaitDuration=10000"}
+        - {regexp: '^-XX:[+]CMSParallelInitialMarkEnabled', line: "#-XX:+CMSParallelInitialMarkEnabled"}
+        - {regexp: '^-XX:[+]CMSEdenChunksRecordAlways', line: "#-XX:+CMSEdenChunksRecordAlways"}
+        - {regexp: '^-XX:[+]CMSClassUnloadingEnabled', line: "#-XX:+CMSClassUnloadingEnabled"}
+        - {regexp: '^#-XX:[+]UseG1GC', line: "-XX:+UseG1GC"}
+        - {regexp: '^#-XX:[+]ParallelRefProcEnabled', line: "-XX:+ParallelRefProcEnabled"}
+
+    - name: Set bashrc
+      lineinfile:
+        path: /home/ubuntu/.bashrc
+        line: "{{ item }}"
+        state: present
+      with_items:
+        - "export CASSANDRA_HOME={{ cassandra_dir }}"
+        - "export PATH=$PATH:$CASSANDRA_HOME/bin"
+        - "alias nodetool=\"nodetool -Dcom.sun.jndi.rmiURLParsing=legacy\""
+
+    - name: Set limits.conf
+      become: true
+      lineinfile:
+        path: /etc/security/limits.conf
+        line: "{{ item }}"
+        state: present
+      with_items:
+        - "ubuntu       soft    nofile  200000"
+        - "ubuntu       hard    nofile  200000"
+        - "ubuntu       soft    nproc   200000"
+        - "ubuntu       hard    nproc   200000"
+        - "ubuntu       soft    memlock unlimited"
+        - "ubuntu       hard    memlock unlimited"
+        - "ubuntu       soft    as      unlimited"
+        - "ubuntu       hard    as      unlimited"
+
+    - name: Set sysctl.conf
+      become: true
+      lineinfile:
+        path: /etc/sysctl.conf
+        line: "{{ item }}"
+        state: present
+      with_items:
+        - "vm.max_map_count = 1048575"
+        - "net.ipv4.tcp_keepalive_time=60"
+        - "net.ipv4.tcp_keepalive_probes=3"
+        - "net.ipv4.tcp_keepalive_intvl=10"
+        - "net.core.rmem_max=16777216"
+        - "net.core.wmem_max=16777216"
+        - "net.core.rmem_default=16777216"
+        - "net.core.optmem_max=40960"
+        - "net.ipv4.tcp_rmem=4096 87380 16777216"
+        - "net.ipv4.tcp_wmem=4096 65536 16777216"
+
+    - name: Create service file for cassandra
+      shell: sudo touch /etc/systemd/system/cassandra.service
+
+    - name: Set cassandra service
+      become: yes
+      lineinfile:
+        path: /etc/systemd/system/cassandra.service
+        line: "{{ item }}"
+        state: present
+      with_items:
+        - "[Unit]"
+        - "Description=Cassandra service"
+        - "After=network.target"
+        - "StartLimitIntervalSec=0"
+        - "[Service]"
+        - "Type=forking"
+        - "Restart=always"
+        - "RestartSec=1"
+        - "User=ubuntu"
+        - "ExecStart=/var/cassandra/bin/cassandra"
+        - "ExecStop=/bin/kill -s 15 $MAINPID"
+        - "[Install]"
+        - "WantedBy=multi-user.target"
+
+    - name: Reload service daemon
+      shell: sudo systemctl daemon-reload
+
+    - name: Enable cassandra service
+      shell: sudo systemctl enable cassandra.service
+
+    - name: Change timezone to IST
+      shell: sudo timedatectl set-timezone Asia/Calcutta
+
+    - name: Restart cron service
+      shell: sudo service cron restart
