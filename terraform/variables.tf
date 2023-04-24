@@ -19,7 +19,7 @@ variable "instance_count" {
 variable "aws_subnet" {
   description = "AWS Subnet"
   type        = string
-  default     = "subnet-0f57ad9c1dda36528"
+  default     = "<subnet_id>" #Provide your subnet here
 }
 
 variable "resource_group_name" {

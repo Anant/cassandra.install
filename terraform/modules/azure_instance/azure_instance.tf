@@ -44,8 +44,8 @@ resource "azurerm_linux_virtual_machine" "vm" {
   size                  = "Standard_DS1_v2"
 
   admin_ssh_key {
-    username   = "cloud_user"
-    public_key = file("~/.ssh/id_rsa.pub")
+    username   = "cassandra"
+    public_key = file("~/.ssh/id_rsa.pub") #Update SSH key path if required
   }
 
   os_disk {
@@ -61,7 +61,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 
      computer_name                   = "cassandra-${count.index}"
-     admin_username                  = "cloud_user"
-     admin_password                  = "abcd@1234"
+     admin_username                  = "cassandra"
+     admin_password                  = "Abcd@12345"
      disable_password_authentication = false
 }
