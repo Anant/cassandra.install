@@ -1,0 +1,16 @@
+[cluster1]
+node1 ansible_host=172.16.6.200 dc=aws1 rack=az1
+node2 ansible_host=172.16.4.188 dc=aws1 rack=az1
+node3 ansible_host=172.16.5.223 dc=aws1 rack=az1
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
+
+##Directories
+cassandra_dir=/var/cassandra
+cassandra_data=/data
+cassandra_commitlog=/commitlog
+
+##cassandra.yaml
+cluster_name=cluster1
+seeds=172.16.6.200,172.16.4.188,172.16.5.223

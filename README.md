@@ -1,11 +1,11 @@
 # install-cassandra
 
 The purpose of this repository is to:
-- Use terraform to create VMs in AWS, Azure or GCP
-- Use ansible to install Cassandra on the created VMs
+- Use terraform to create VMs in AWS, Azure or both.
+- Use ansible to install Cassandra on the created VMs.
 
 Note:
-- Cassandra install has been tested on Ubuntu 22
+- This has been tested on Ubuntu 22.
 
 ## Pre-requisites
 
@@ -14,7 +14,6 @@ Note:
 - Any of the below:
 -- AWS account
 -- Azure account
--- GCP account
 
 ### Install Terraform
 
@@ -54,20 +53,14 @@ terraform -help
 ### Install Ansible
 
 - Install Ansible on the same host as Terraform.
-- 
+```
+sudo apt update
+sudo apt install software-properties-common
+sudo add-apt-repository --yes --update ppa:ansible/ansible
+sudo apt install ansible
+```
 
 ### Configure AWS CLI
-
-- You will have to install AWS CLI on your Terraform\Ansible host.
-- Check if you have Python3 installed on the server:
-```
-python3 --version
-```
-- Install pip:
-```
-sudo apt install python3-pip
-```
-- Install AWS CLI:
 ```
 sudo apt install awscli
 ```
@@ -105,11 +98,32 @@ sudo apt-get install azure-cli
 ```
 az login
 ```
+- Also create your SSH key that will be provided to Azure instances for access:
+```
+ssh-keygen -t rsa -b 4096
+```
 
-# Start
+# Cassandra Installation
 
 - Download this repository and place it in a directory of your choice.
+- In terraform\variables.tf, update the "enable_aws" and ""enable_azure" variables depending on when you want to create your VMs.
+- For AWS, provide the subnet in your account where you want to create your VMs.
 - Go inside terraform directory and initialize terraform:
 ```
 terraform init
 ```
+- Create your spefied VMs by running the apply command:
+```
+terraform apply
+```
+- Once the VMs are created and you have confirmed SSH access to the servers, use ansible to install Cassandra on them.
+- Go to the ansible\hosts file and update the IPs of your servers. Verify ansible is able to access all your servers using the below command:
+```
+ansible all -m ping
+```
+- Execute the Cassandra pre-requisites and the setup playbooks to configure Cassandra on your servers.
+```
+ansible-playbook -i ansible/hosts -k ansible/playbooks/cassandra-pre.yml
+ansible-playbook -i ansible/hosts -k ansible/playbooks/cassandra-setup.yml
+```
+- The cluster is now configured and you can start the services.
