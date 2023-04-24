@@ -5,7 +5,7 @@ The purpose of this repository is to:
 - Use ansible to install Cassandra on the created VMs.
 
 Note:
-- Cassandra install has been tested on Ubuntu 22.
+- This has been tested on Ubuntu 22.
 
 ## Pre-requisites
 
@@ -53,18 +53,11 @@ terraform -help
 ### Install Ansible
 
 - Install Ansible on the same host as Terraform.
-- 
-
-### Configure AWS CLI
-
-- You will have to install AWS CLI on your Terraform\Ansible host.
-- Check if you have Python3 installed on the server:
 ```
-python3 --version
-```
-- Install pip:
-```
-sudo apt install python3-pip
+sudo apt update
+sudo apt install software-properties-common
+sudo add-apt-repository --yes --update ppa:ansible/ansible
+sudo apt install ansible
 ```
 
 ### Configure AWS CLI
@@ -110,7 +103,7 @@ az login
 ssh-keygen -t rsa -b 4096
 ```
 
-# Start
+# Cassandra Installation
 
 - Download this repository and place it in a directory of your choice.
 - In terraform\variables.tf, update the "enable_aws" and ""enable_azure" variables depending on when you want to create your VMs.
