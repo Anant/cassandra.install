@@ -1,4 +1,4 @@
-# install-cassandra
+# cassandra.install
 
 The purpose of this repository is to:
 - Use terraform to create VMs in AWS, Azure or both.
