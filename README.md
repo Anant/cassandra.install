@@ -11,9 +11,7 @@ Note:
 
 - Terraform
 - Ansible
-- Any of the below:
--- AWS account
--- Azure account
+- AWS\Azure account
 
 ### Install Terraform
 
